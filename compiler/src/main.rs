@@ -18,61 +18,65 @@ fn strtol<I: Iterator<Item = char>>(iter: &mut Peekable<I>) -> i32 {
 }
 
 enum TokenType {
+    HEAD,
     RESERVED,
     NUM,
     EOF
 }
 
-struct Token<'a> {
-    tokenType: TokenType,
-    next: Option<&'a mut Token<'a>>,
-    val: i32,
-    str: Vec<char>,
+struct TokenList{
+   value: Option<Vec<char>>,
+   num: Option<i32>,
+   token_type: TokenType,
+   next: Option<Box<TokenList>>
 }
 
-fn consume(token: &Token, op: char) -> bool{
-    if matches!(token.tokenType,TokenType::RESERVED) || token.str[0] != op {
+fn consume(token_list:TokenList, op: char) -> bool{
+    if matches!(token_list.token_type,TokenType::RESERVED) || token_list.value.unwrap()[0] != op {
         return false
     }
-    token = token.next.unwrap();
+    token_list = *token_list.next.unwrap();
     true
 }
 
-fn expect(token: &Token,op: char){
-    if matches!(token.tokenType,TokenType::RESERVED) || token.str[0] != op {
+fn expect(token_list: TokenList,op: char){
+    if matches!(token_list.token_type,TokenType::RESERVED) || token_list.value.unwrap()[0] != op {
         panic!("Expected {}", op);
     }
-    token = token.next.unwrap();
+    token_list = *token_list.next.unwrap();
 }
 
-fn expect_number(token:&mut Token) -> i32{
-    if matches!(token.tokenType,TokenType::NUM) {
+fn expect_number(token_list: TokenList) -> i32{
+    if matches!(token_list.token_type,TokenType::NUM) {
         panic!("Expected number");
     }
-    let val = token.val;
-    token = token.next.unwrap();
-    val
+    let val = token_list.num;
+    token_list = *token_list.next.unwrap();
+    val.unwrap()
 }
 
-fn at_eof(token: &Token) -> bool{
-    matches!(token.tokenType,TokenType::EOF)
+fn at_eof(token_list: TokenList) -> bool{
+    matches!(token_list.token_type, TokenType::EOF)
 }
 
-fn new_token<'a>(tokenType: TokenType, str: Vec<char>, cur: &Token<'a>) -> &'a Token<'a> {
-    let mut token: Token = Token{
-        tokenType,
+fn new_token(token_type: TokenType, str: Vec<char>, cur:&mut TokenList) -> TokenList {
+    let token_list: Box<TokenList> = Box::new(TokenList{
+        token_type: token_type,
+        value: Some(str),
+        num: None,
         next: None,
-        val: 0,
-        str,
-    };
-    cur.next = Some(&mut token);
-    cur.next.unwrap()
+    });
+    cur.next = Some(token_list);
+    *cur.next.unwrap()
 }
 
-fn tokenize<'a>(str: String) -> &'a Token<'a>{
-    let head: Token;
-    head.next = None;
-    let mut cur: &Token = &head;
+fn tokenize(str: String) -> TokenList {
+    let mut token_list: TokenList = TokenList{
+        token_type: TokenType::HEAD,
+        value: None,
+        num: None,
+        next: None,
+    };
     let mut iter = str.chars().peekable();
     loop {
         match iter.next() {
@@ -80,17 +84,17 @@ fn tokenize<'a>(str: String) -> &'a Token<'a>{
                 match val {
                     '+' | '-' => {
                         let s = vec![val];
-                        cur = new_token(TokenType::RESERVED,s , cur);
+                        token_list = new_token(TokenType::RESERVED,s , &mut token_list);
                     },
                     '0' ..= '9' => {
                         let numStr = strtol(&mut iter).to_string();
-                        cur = new_token(TokenType::NUM, numStr.chars().collect(), cur);
+                        token_list = new_token(TokenType::NUM, numStr.chars().collect(), &mut token_list);
                     },
                     ' ' => {
                         continue;
                     }
                     '\n' => {
-                        cur = new_token(TokenType::EOF, vec![], cur);
+                        token_list = new_token(TokenType::EOF, vec![], &mut token_list);
                     }
                     _ => {
                         panic!("Unexpected character");
@@ -98,12 +102,12 @@ fn tokenize<'a>(str: String) -> &'a Token<'a>{
                 }
             }
             None => {
-                cur = new_token(TokenType::EOF, vec![], cur);
+                token_list = new_token(TokenType::EOF, vec![], &mut token_list);
                 break;
             }
         }
     }
-    head.next.unwrap()
+    *token_list.next.unwrap()
 }
 
 fn main() {
@@ -116,7 +120,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    let mut token: &Token<'_> = tokenize(args[1]);
+    let token_list: TokenList = tokenize(args[1]);
 
     // println!(".intel_syntax noprefix");
     // println!(".global main");
