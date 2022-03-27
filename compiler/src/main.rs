@@ -1,9 +1,65 @@
-mod utils;
 mod tokenizer;
 
-use tokenizer::token;
-use tokenizer::token::TokenType;
-use utils::linked_list;
+use std::{collections::LinkedList, process};
+
+use crate::tokenizer::token;
+
+fn output_head_asm(token: LinkedList<token::Token>) -> LinkedList<token::Token> {
+    println!(".intel_syntax noprefix");
+    println!(".global main");
+    println!("main:");
+    let (num, new_token) = token::expect_number(token);
+    println!("  mov rax, {}", num);
+    new_token
+}
+
+fn output_asm(token: LinkedList<token::Token>){
+    if token::at_eof(token.clone()) {
+        println!("  ret");
+        return;
+    }
+    
+    let mut iter = token.into_iter().peekable();
+
+    loop {
+        match iter.peek() {
+            Some(val) => {
+                match val.token_type {
+                    token::TokenType::RESERVED => {
+                        let s = val.str.clone();
+                        match s {
+                            "+" => {
+                                iter.next();
+                                let num = iter.peek().unwrap().val;
+                                println!("  add rax, {}", num);
+                            },
+                            "-" => {
+                                iter.next();
+                                let num = iter.peek().unwrap().val;
+                                println!("  sub rax, {}",num);
+                            },
+                            _ => {
+                                println!("Unexpected token");
+                                process::exit(1);
+                            }
+                        }
+                        println!("  {}", s);
+                    },
+                    token::TokenType::NUM => {
+                        // Do nothing
+                    },
+                    token::TokenType::EOF => {
+                        break;
+                    }
+                }
+                iter.next();
+            }
+            None => {
+                break;
+            }
+        }
+    }
+}
 
 
 fn main() {
@@ -16,55 +72,7 @@ fn main() {
         std::process::exit(1);
     }
 
-    let token_list: linked_list::LinkedList<token::Token> = token::tokenize(&args[1]);
-    let mut current_token = token_list.get_head();
-
-    println!(".intel_syntax noprefix");
-    println!(".global main");
-    println!("main:");
-    loop {
-        println!("{:?}", current_token);
-        match current_token {
-            Some(ref mut token) => {
-                let token_type = token.get_body().token_type;
-                match token_type {
-                    TokenType::RESERVED => {
-                        let operator = token.get_body().value.as_ref().unwrap()[0];
-                        let next_num = token.read_next().unwrap().get_body().num.unwrap();
-                        match operator {
-                            '+' => {
-                                println!("  add rax, {}", next_num);
-                            },
-                            '-' => {
-                                println!("  sub rax, {}", next_num);
-                            },
-                            _ => {
-                                println!("Unexpected token");
-                                std::process::exit(1);
-                            }
-                        }
-                    },
-                    TokenType::NUM => {
-                        let num = token.get_body().num.unwrap();
-                        println!("  mov rax, {}", num);
-                    },
-                    TokenType::WHITESPACE | TokenType::HEAD => {
-                        // 何もしない
-                    },
-                    TokenType::EOF => {
-                        break;
-                    }
-                }
-                let next_token = token.read_next();
-                if next_token.is_none() {
-                    break;
-                }
-                current_token = next_token;
-            }
-            None => {
-                break;
-            }
-        }
-    }
-    println!("  ret");
+    let token: LinkedList<token::Token> = token::tokenize(&args[1]);
+    let token = output_head_asm(token);
+    output_asm(token);
 }
