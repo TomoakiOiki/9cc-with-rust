@@ -1,12 +1,12 @@
-use std::iter::Peekable;
+use std::{iter::Peekable, collections::LinkedList, process::{self, exit}};
+use crate::utils::error;
 
-use crate::utils::linked_list::LinkedList;
 
-fn strtol<I: Iterator<Item = char>>(iter: &mut Peekable<I>) -> i32 {
+fn strtol<I: Iterator<Item = (usize,char)>>(iter: &mut Peekable<I>) -> i32 {
     let mut result: i32 = 0;
     loop {
         match iter.peek(){
-            Some(c) => {
+            Some((_,c)) => {
                 match c.to_digit(10) {
                     Some(d) => {
                         result = result * 10 + d as i32;
@@ -23,8 +23,6 @@ fn strtol<I: Iterator<Item = char>>(iter: &mut Peekable<I>) -> i32 {
 
 #[derive(Debug,Clone)]
 pub enum TokenType {
-    HEAD,
-    WHITESPACE,
     RESERVED,
     NUM,
     EOF
@@ -34,70 +32,85 @@ pub enum TokenType {
 #[derive(Debug,Clone)]
 pub struct Token{
     pub token_type: TokenType,
-    pub value: Option<Vec<char>>,
-    pub num: Option<i32>,
+    pub val: i32,
+    pub pos: usize,
+    pub str: String
 }
 
-fn new_token(token_type: TokenType, value: Vec<char>, cur:&mut LinkedList<Token>){
-    match token_type {
-        TokenType::NUM => {
-            let s:String = value.iter().collect();
-            let mut iter = s.chars().peekable();
-            let num = strtol(&mut iter);
-            cur.push_back(Token{
-                token_type: TokenType::NUM,
-                value: None,
-                num: Some(num)
-            });
-        },
-        _ =>{
-            cur.push_back(Token{
-                token_type: token_type,
-                value: Some(value),
-                num: None
-            });
-        }
+
+// pub fn expect(op: char,mut token: LinkedList<Token>) -> bool {
+//     if matches!(token.front().unwrap().token_type, TokenType::RESERVED)
+//         || token.front().unwrap().str.as_bytes()[0] as char != op
+//     {
+//         return false;
+//     }
+//     true
+// }
+
+// pub fn consume(op: char, mut token: LinkedList<Token>) -> LinkedList<Token> {
+//     if matches!(token.front().unwrap().token_type,TokenType::RESERVED)
+//         || token.front().unwrap().str.as_bytes()[0] as char != op
+//     {
+//         println!("{} != {}", op, token.front().unwrap().str);
+//         process::exit(1);
+//     }
+//     token.pop_front();
+//     token
+// }
+
+pub fn expect_number(input:String, token: &Token) -> i32 {
+    if !matches!(token.token_type,TokenType::NUM) {
+        error::error_at(input, token.pos, "数値ではありません".to_string());
+        process::exit(1);
     }
+    token.val
+}
+
+// pub fn at_eof(token: LinkedList<Token>) -> bool {
+//     matches!(token.front().unwrap().token_type,TokenType::EOF)
+// }
+
+fn new_token(token_type: TokenType, val: i32, str: String, mut cur: LinkedList<Token>, pos: usize) -> LinkedList<Token> {
+    cur.push_back(Token{
+        token_type: token_type,
+        val: val,
+        str: str,
+        pos: pos
+    });
+    cur
 }
 
 pub fn tokenize(str: &String) -> LinkedList<Token> {
-    println!("{}",str);
-    let mut token_list: LinkedList<Token> = LinkedList::new({
-        Token{
-            token_type: TokenType::HEAD,
-            value: None,
-            num: None
-        }
-    });
-    let mut iter = str.chars().peekable();
-
+    let mut token: LinkedList<Token> = LinkedList::new();
+    let mut iter = str.chars().enumerate().peekable();
     loop {
         match iter.peek() {
-            Some(val) => {
-                println!("{}",val);
+            Some((index,val)) => {
                 match val {
                     '+' | '-' => {
-                        let s = vec![*val];
-                        new_token(TokenType::RESERVED,s, &mut token_list);
+                        let s = String::from(*val);
+                        token = new_token(TokenType::RESERVED,0, s,token, *index);
+                        iter.next();
                     },
                     '0'..='9' => {
-                        let num_str = strtol(&mut iter).to_string();
-                        new_token(TokenType::NUM,num_str.chars().collect(), &mut token_list);
+                        let index = *index;
+                        let num = strtol(&mut iter);
+                        token = new_token(TokenType::NUM,num,String::from(""),token, index);
                     },
                     ' ' => {
-                        new_token(TokenType::WHITESPACE, vec![], &mut token_list);
+                        iter.next();
                     }
                     _ => {
-                        panic!("Unexpected character");
+                        error::error_at(str.clone(),*index, String::from("不明なトークンです"));
+                        exit(1);
                     }
                 }
-                iter.next();
             }
             None => {
-                new_token(TokenType::EOF, vec![], &mut token_list);
+                token = new_token(TokenType::EOF, 0, String::from(""),  token, 0);
                 break;
             }
         }
     }
-    token_list
+    token
 }
