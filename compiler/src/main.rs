@@ -5,17 +5,12 @@ use std::{collections::LinkedList, process};
 
 use crate::tokenizer::token;
 
-fn output_head_asm(token: LinkedList<token::Token>) -> LinkedList<token::Token> {
-    println!(".intel_syntax noprefix");
-    println!(".global main");
-    println!("main:");
-    let (num, new_token) = token::expect_number(token);
-    println!("  mov rax, {}", num);
-    new_token
-}
-
-fn output_asm(token: LinkedList<token::Token>){
+fn output_asm(input: String, token: LinkedList<token::Token>){
     let mut iter = token.into_iter().peekable();
+    let mut asm: Vec<String> = Vec::new();
+    asm.push(".intel_syntax noprefix".to_string());
+    asm.push(".global main".to_string());
+    asm.push("main:".to_string());
 
     loop {
         match iter.peek() {
@@ -26,25 +21,27 @@ fn output_asm(token: LinkedList<token::Token>){
                         match s {
                             "+" => {
                                 iter.next();
-                                let num = iter.peek().unwrap().val;
-                                println!("  add rax, {}", num);
+                                let token = *iter.peek().as_ref().unwrap();
+                                let num = token::expect_number(input.clone(), token);
+                                asm.push(format!("  add rax, {}", num));
                             },
                             "-" => {
                                 iter.next();
-                                let num = iter.peek().unwrap().val;
-                                println!("  sub rax, {}",num);
+                                let num = iter.peek().unwrap().val.clone();
+                                asm.push(format!("  sub rax, {}", num));
                             },
                             _ => {
-                                println!("Unexpected token");
+                                asm.push("Unexpected token".to_string());
                                 process::exit(1);
                             }
                         }
                     },
                     token::TokenType::NUM => {
-                        // Do nothing
+                        let num = token::expect_number(input.clone(), val);
+                        asm.push(format!("  mov rax, {}", num));
                     },
                     token::TokenType::EOF => {
-                        println!("  ret");
+                        asm.push("  ret".to_string());
                         break;
                     }
                 }
@@ -54,6 +51,10 @@ fn output_asm(token: LinkedList<token::Token>){
                 break;
             }
         }
+    }
+
+    for line in asm {
+        println!("{}", line);
     }
 }
 
@@ -65,8 +66,7 @@ fn main() {
         println!("引数の個数が正しくありません");
         std::process::exit(1);
     }
-
-    let token: LinkedList<token::Token> = token::tokenize(&args[1]);
-    let token = output_head_asm(token);
-    output_asm(token);
+    let input = args[1].clone();
+    let token: LinkedList<token::Token> = token::tokenize(&input);
+    output_asm(input, token);
 }

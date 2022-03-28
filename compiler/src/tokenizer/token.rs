@@ -33,6 +33,7 @@ pub enum TokenType {
 pub struct Token{
     pub token_type: TokenType,
     pub val: i32,
+    pub pos: usize,
     pub str: String
 }
 
@@ -57,24 +58,24 @@ pub struct Token{
 //     token
 // }
 
-pub fn expect_number(token: LinkedList<Token>) -> (i32, LinkedList<Token>) {
-    if !matches!(token.front().unwrap().token_type,TokenType::NUM) {
-        println!("Expect number");
+pub fn expect_number(input:String, token: &Token) -> i32 {
+    if !matches!(token.token_type,TokenType::NUM) {
+        error::error_at(input, token.pos, "数値ではありません".to_string());
         process::exit(1);
     }
-    let val = token.front().unwrap().val;
-    (val, token)
+    token.val
 }
 
 // pub fn at_eof(token: LinkedList<Token>) -> bool {
 //     matches!(token.front().unwrap().token_type,TokenType::EOF)
 // }
 
-fn new_token(token_type: TokenType, val: i32, str: String, mut cur: LinkedList<Token>) -> LinkedList<Token> {
+fn new_token(token_type: TokenType, val: i32, str: String, mut cur: LinkedList<Token>, pos: usize) -> LinkedList<Token> {
     cur.push_back(Token{
         token_type: token_type,
         val: val,
-        str: str
+        str: str,
+        pos: pos
     });
     cur
 }
@@ -88,24 +89,25 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
                 match val {
                     '+' | '-' => {
                         let s = String::from(*val);
-                        token = new_token(TokenType::RESERVED,0, s,token);
+                        token = new_token(TokenType::RESERVED,0, s,token, *index);
                         iter.next();
                     },
                     '0'..='9' => {
+                        let index = *index;
                         let num = strtol(&mut iter);
-                        token = new_token(TokenType::NUM,num,String::from(""),token);
+                        token = new_token(TokenType::NUM,num,String::from(""),token, index);
                     },
                     ' ' => {
                         iter.next();
                     }
                     _ => {
-                        error::error_at(str.clone(),*index, String::from("Unexpected token"));
+                        error::error_at(str.clone(),*index, String::from("不明なトークンです"));
                         exit(1);
                     }
                 }
             }
             None => {
-                token = new_token(TokenType::EOF, 0, String::from(""),  token);
+                token = new_token(TokenType::EOF, 0, String::from(""),  token, 0);
                 break;
             }
         }
