@@ -1,4 +1,5 @@
 mod tokenizer;
+mod utils;
 
 use std::{collections::LinkedList, process};
 
@@ -14,11 +15,6 @@ fn output_head_asm(token: LinkedList<token::Token>) -> LinkedList<token::Token> 
 }
 
 fn output_asm(token: LinkedList<token::Token>){
-    if token::at_eof(token.clone()) {
-        println!("  ret");
-        return;
-    }
-    
     let mut iter = token.into_iter().peekable();
 
     loop {
@@ -26,7 +22,7 @@ fn output_asm(token: LinkedList<token::Token>){
             Some(val) => {
                 match val.token_type {
                     token::TokenType::RESERVED => {
-                        let s = val.str.clone();
+                        let s: &str = &val.str.clone();
                         match s {
                             "+" => {
                                 iter.next();
@@ -43,12 +39,12 @@ fn output_asm(token: LinkedList<token::Token>){
                                 process::exit(1);
                             }
                         }
-                        println!("  {}", s);
                     },
                     token::TokenType::NUM => {
                         // Do nothing
                     },
                     token::TokenType::EOF => {
+                        println!("  ret");
                         break;
                     }
                 }
@@ -63,10 +59,8 @@ fn output_asm(token: LinkedList<token::Token>){
 
 
 fn main() {
-    // コマンド引数を受け取る
     let args: Vec<String> = std::env::args().collect();
 
-    // コマンド引数が2つでなければエラー
     if args.len() < 2 {
         println!("引数の個数が正しくありません");
         std::process::exit(1);
