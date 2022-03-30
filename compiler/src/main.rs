@@ -1,63 +1,41 @@
-mod tokenizer;
-mod utils;
+mod error;
+mod token;
 
-use std::{collections::LinkedList, process};
+use std::collections::LinkedList;
 
-use crate::tokenizer::token;
+use token::at_eof;
 
-fn output_asm(input: String, token: LinkedList<token::Token>){
+fn output_asm(input: String, token: LinkedList<token::Token>) {
     let mut iter = token.into_iter().peekable();
     let mut asm: Vec<String> = Vec::new();
     asm.push(".intel_syntax noprefix".to_string());
     asm.push(".global main".to_string());
     asm.push("main:".to_string());
+    asm.push(format!(
+        "  mov rax, {}",
+        token::expect_number(input.clone(), &mut iter)
+    ));
 
-    loop {
-        match iter.peek() {
-            Some(val) => {
-                match val.token_type {
-                    token::TokenType::RESERVED => {
-                        let s: &str = &val.str.clone();
-                        match s {
-                            "+" => {
-                                iter.next();
-                                let token = *iter.peek().as_ref().unwrap();
-                                let num = token::expect_number(input.clone(), token);
-                                asm.push(format!("  add rax, {}", num));
-                            },
-                            "-" => {
-                                iter.next();
-                                let num = iter.peek().unwrap().val.clone();
-                                asm.push(format!("  sub rax, {}", num));
-                            },
-                            _ => {
-                                asm.push("Unexpected token".to_string());
-                                process::exit(1);
-                            }
-                        }
-                    },
-                    token::TokenType::NUM => {
-                        let num = token::expect_number(input.clone(), val);
-                        asm.push(format!("  mov rax, {}", num));
-                    },
-                    token::TokenType::EOF => {
-                        asm.push("  ret".to_string());
-                        break;
-                    }
-                }
-                iter.next();
-            }
-            None => {
-                break;
-            }
+    while !at_eof(&mut iter) {
+        if token::consume('+', &mut iter) {
+            let num = token::expect_number(input.clone(), &mut iter);
+            asm.push(format!("  add rax, {}", num));
+            continue;
         }
+
+        token::expect('-', &mut iter);
+        asm.push(format!(
+            "  sub rax, {}",
+            token::expect_number(input.clone(), &mut iter)
+        ));
     }
+
+    asm.push("  ret".to_string());
 
     for line in asm {
         println!("{}", line);
     }
 }
-
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
