@@ -1,4 +1,4 @@
-use std::{iter::Peekable, collections::LinkedList, process::{self, exit}};
+use std::{iter::Peekable, collections::{LinkedList, linked_list::IntoIter}, process::{self, exit}};
 use crate::utils::error;
 
 
@@ -38,37 +38,39 @@ pub struct Token{
 }
 
 
-// pub fn expect(op: char,mut token: LinkedList<Token>) -> bool {
-//     if matches!(token.front().unwrap().token_type, TokenType::RESERVED)
-//         || token.front().unwrap().str.as_bytes()[0] as char != op
-//     {
-//         return false;
-//     }
-//     true
-// }
+pub fn consume(op: char, iter: &mut Peekable<IntoIter<Token>>) -> bool {
+    let token = iter.peek().unwrap().clone();
+    if !matches!(token.token_type, TokenType::RESERVED) || token.str.as_bytes()[0] as char != op {
+        return false;
+    }
+    iter.next();
+    true
+}
 
-// pub fn consume(op: char, mut token: LinkedList<Token>) -> LinkedList<Token> {
-//     if matches!(token.front().unwrap().token_type,TokenType::RESERVED)
-//         || token.front().unwrap().str.as_bytes()[0] as char != op
-//     {
-//         println!("{} != {}", op, token.front().unwrap().str);
-//         process::exit(1);
-//     }
-//     token.pop_front();
-//     token
-// }
+pub fn expect(op: char, iter: &mut Peekable<IntoIter<Token>>){
+    let token = iter.peek().unwrap().clone();
+    if !matches!(token.token_type,TokenType::RESERVED) || token.str.as_bytes()[0] as char != op
+    {
+        println!("{} != {}", op, token.str);
+        process::exit(1);
+    }
+    iter.next();
+}
 
-pub fn expect_number(input:String, token: &Token) -> i32 {
+pub fn expect_number(input: String, iter: &mut Peekable<IntoIter<Token>>) -> i32 {
+    let token = iter.peek().unwrap().clone();
     if !matches!(token.token_type,TokenType::NUM) {
         error::error_at(input, token.pos, "数値ではありません".to_string());
         process::exit(1);
     }
+    iter.next();
     token.val
 }
 
-// pub fn at_eof(token: LinkedList<Token>) -> bool {
-//     matches!(token.front().unwrap().token_type,TokenType::EOF)
-// }
+pub fn at_eof(iter: &mut Peekable<IntoIter<Token>>) -> bool {
+    let token = iter.peek().unwrap();
+    matches!(token.token_type,TokenType::EOF)
+}
 
 fn new_token(token_type: TokenType, val: i32, str: String, mut cur: LinkedList<Token>, pos: usize) -> LinkedList<Token> {
     cur.push_back(Token{
