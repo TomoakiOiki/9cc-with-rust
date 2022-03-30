@@ -1,5 +1,5 @@
 use std::{iter::Peekable, collections::{LinkedList, linked_list::IntoIter}, process::{self, exit}};
-use crate::utils::error;
+use error;
 
 
 fn strtol<I: Iterator<Item = (usize,char)>>(iter: &mut Peekable<I>) -> i32 {

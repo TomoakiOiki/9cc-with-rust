@@ -1,11 +1,10 @@
-mod tokenizer;
-mod utils;
+mod token;
+mod error;
 
 use std::{collections::LinkedList};
 
-use tokenizer::token::at_eof;
+use token::at_eof;
 
-use crate::tokenizer::token;
 
 fn output_asm(input: String, token: LinkedList<token::Token>){
     let mut iter = token.into_iter().peekable();
