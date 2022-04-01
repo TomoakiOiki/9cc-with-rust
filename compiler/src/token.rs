@@ -92,7 +92,7 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
     loop {
         match iter.peek() {
             Some((index, val)) => match val {
-                '+' | '-' | '*' | '/' => {
+                '+' | '-' | '*' | '/' | '(' | ')' => {
                     let s = String::from(*val);
                     token = new_token(TokenType::RESERVED, 0, s, token, *index);
                     iter.next();
