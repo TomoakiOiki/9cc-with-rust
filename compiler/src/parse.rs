@@ -1,3 +1,8 @@
+use std::{collections::linked_list::IntoIter, iter::Peekable};
+
+use crate::token;
+use crate::token::Token;
+
 pub enum NodeType {
     ND_ADD,
     ND_SUB,
@@ -8,16 +13,16 @@ pub enum NodeType {
 
 pub struct Node {
     pub node_type: NodeType,
-    pub lhs: Box<Node>,
-    pub rhs: Box<Node>,
+    pub lhs: Option<Box<Node>>,
+    pub rhs: Option<Box<Node>>,
     pub val: i32,
 }
 
 pub fn new_node(node_type: NodeType, lhs: Box<Node>, rhs: Box<Node>) -> Node {
     Node {
         node_type,
-        lhs,
-        rhs,
+        lhs: Some(lhs),
+        rhs: Some(rhs),
         val: 0,
     }
 }
@@ -25,6 +30,8 @@ pub fn new_node(node_type: NodeType, lhs: Box<Node>, rhs: Box<Node>) -> Node {
 pub fn new_num_node(val: i32) -> Node {
     Node {
         node_type: NodeType::ND_NUM,
+        lhs: None,
+        rhs: None,
         val: val,
     }
 }
@@ -33,10 +40,10 @@ pub fn expr(iter: &mut Peekable<IntoIter<Token>>) -> Node {
     let mut node = mul(iter);
 
     loop {
-        if token::consume("+", iter) {
-            node = new_node(NodeType::ND_ADD, node, mul(iter))
-        } else if token::consume("-", iter) {
-            node = new_node(NodeType::ND_SUB, node, mul(iter))
+        if token::consume('+', iter) {
+            node = new_node(NodeType::ND_ADD, Box::new(node), Box::new(mul(iter)))
+        } else if token::consume('-', iter) {
+            node = new_node(NodeType::ND_SUB, Box::new(node), Box::new(mul(iter)))
         } else {
             return node;
         }
@@ -47,10 +54,10 @@ pub fn mul(iter: &mut Peekable<IntoIter<Token>>) -> Node {
     let mut node = primary(iter);
 
     loop {
-        if token::consume("*", iter) {
-            node = new_node(NodeType::ND_MUL, node, primary(iter))
-        } else if token::consume("/", iter) {
-            node = new_node(NodeType::ND_DIV, node, primary(iter))
+        if token::consume('*', iter) {
+            node = new_node(NodeType::ND_MUL, Box::new(node), Box::new(primary(iter)))
+        } else if token::consume('/', iter) {
+            node = new_node(NodeType::ND_DIV, Box::new(node), Box::new(primary(iter)))
         } else {
             return node;
         }
@@ -58,11 +65,11 @@ pub fn mul(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 }
 
 pub fn primary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    if consume('(', iter) {
+    if token::consume('(', iter) {
         let node = expr(iter);
-        expect(')', iter);
-        node
+        token::expect(')', iter);
+        return node;
     }
 
-    new_num_node(expected_number(iter))
+    new_num_node(token::expect_number(iter))
 }

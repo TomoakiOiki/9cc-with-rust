@@ -55,10 +55,10 @@ pub fn expect(op: char, iter: &mut Peekable<IntoIter<Token>>) {
     iter.next();
 }
 
-pub fn expect_number(input: String, iter: &mut Peekable<IntoIter<Token>>) -> i32 {
+pub fn expect_number(iter: &mut Peekable<IntoIter<Token>>) -> i32 {
     let token = iter.peek().unwrap().clone();
     if !matches!(token.token_type, TokenType::NUM) {
-        error::error_at(input, token.pos, "数値ではありません".to_string());
+        // error::error_at(input, token.pos, "数値ではありません".to_string());
         process::exit(1);
     }
     iter.next();
@@ -92,7 +92,7 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
     loop {
         match iter.peek() {
             Some((index, val)) => match val {
-                '+' | '-' => {
+                '+' | '-' | '*' | '/' => {
                     let s = String::from(*val);
                     token = new_token(TokenType::RESERVED, 0, s, token, *index);
                     iter.next();
