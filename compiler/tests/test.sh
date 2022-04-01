@@ -17,7 +17,7 @@ assert(){
 }
 
 assert 27 "5 + 23 - 1"
-assert 51 "10 + 44-3"
-assert 10 "1+ 2 +  3  +   4"
+assert 25 "10 + 5*3"
+assert 10 "10/(1+4)"
 
 echo OK

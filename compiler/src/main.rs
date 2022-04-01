@@ -16,5 +16,10 @@ fn main() {
     let token: LinkedList<token::Token> = token::tokenize(&input);
     let mut node = parse::expr(&mut token.into_iter().peekable());
 
+    println!(".intel_syntax noprefix");
+    println!(".global main");
+    println!("main:");
     asm::gen(&mut node);
+    println!("  pop rax");
+    println!("  ret");
 }
