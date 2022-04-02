@@ -51,17 +51,30 @@ pub fn expr(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 }
 
 pub fn mul(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    let mut node = primary(iter);
+    let mut node = unary(iter);
 
     loop {
         if token::consume('*', iter) {
-            node = new_node(NodeType::ND_MUL, Box::new(node), Box::new(primary(iter)))
+            node = new_node(NodeType::ND_MUL, Box::new(node), Box::new(unary(iter)))
         } else if token::consume('/', iter) {
-            node = new_node(NodeType::ND_DIV, Box::new(node), Box::new(primary(iter)))
+            node = new_node(NodeType::ND_DIV, Box::new(node), Box::new(unary(iter)))
         } else {
             return node;
         }
     }
+}
+
+pub fn unary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
+    if token::consume('+', iter) {
+        return primary(iter);
+    } else if token::consume('-', iter) {
+        return new_node(
+            NodeType::ND_SUB,
+            Box::new(new_num_node(0)),
+            Box::new(primary(iter)),
+        );
+    }
+    return primary(iter);
 }
 
 pub fn primary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
