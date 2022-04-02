@@ -40,9 +40,9 @@ pub fn expr(iter: &mut Peekable<IntoIter<Token>>) -> Node {
     let mut node = mul(iter);
 
     loop {
-        if token::consume('+', iter) {
+        if token::consume('+'.to_string(), iter) {
             node = new_node(NodeType::ND_ADD, Box::new(node), Box::new(mul(iter)))
-        } else if token::consume('-', iter) {
+        } else if token::consume('-'.to_string(), iter) {
             node = new_node(NodeType::ND_SUB, Box::new(node), Box::new(mul(iter)))
         } else {
             return node;
@@ -51,21 +51,34 @@ pub fn expr(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 }
 
 pub fn mul(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    let mut node = primary(iter);
+    let mut node = unary(iter);
 
     loop {
-        if token::consume('*', iter) {
-            node = new_node(NodeType::ND_MUL, Box::new(node), Box::new(primary(iter)))
-        } else if token::consume('/', iter) {
-            node = new_node(NodeType::ND_DIV, Box::new(node), Box::new(primary(iter)))
+        if token::consume('*'.to_string(), iter) {
+            node = new_node(NodeType::ND_MUL, Box::new(node), Box::new(unary(iter)))
+        } else if token::consume('/'.to_string(), iter) {
+            node = new_node(NodeType::ND_DIV, Box::new(node), Box::new(unary(iter)))
         } else {
             return node;
         }
     }
 }
 
+pub fn unary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
+    if token::consume('+'.to_string(), iter) {
+        return primary(iter);
+    } else if token::consume('-'.to_string(), iter) {
+        return new_node(
+            NodeType::ND_SUB,
+            Box::new(new_num_node(0)),
+            Box::new(primary(iter)),
+        );
+    }
+    return primary(iter);
+}
+
 pub fn primary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    if token::consume('(', iter) {
+    if token::consume('('.to_string(), iter) {
         let node = expr(iter);
         token::expect(')', iter);
         return node;
