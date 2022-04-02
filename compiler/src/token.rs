@@ -35,11 +35,13 @@ pub struct Token {
     pub val: i32,
     pub pos: usize,
     pub str: String,
+    pub len: usize,
 }
 
-pub fn consume(op: char, iter: &mut Peekable<IntoIter<Token>>) -> bool {
+pub fn consume(op: String, iter: &mut Peekable<IntoIter<Token>>) -> bool {
     let token = iter.peek().unwrap().clone();
-    if !matches!(token.token_type, TokenType::RESERVED) || token.str.as_bytes()[0] as char != op {
+    if !matches!(token.token_type, TokenType::RESERVED) || token.len != op.len() || token.str != op
+    {
         return false;
     }
     iter.next();
@@ -77,11 +79,13 @@ fn new_token(
     mut cur: LinkedList<Token>,
     pos: usize,
 ) -> LinkedList<Token> {
+    let len = str.len();
     cur.push_back(Token {
         token_type: token_type,
         val: val,
         str: str,
         pos: pos,
+        len: len,
     });
     cur
 }
@@ -91,7 +95,26 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
     let mut iter = str.chars().enumerate().peekable();
     loop {
         match iter.peek() {
-            Some((index, val)) => match val {
+            Some((index, ref val)) => match val {
+                '<' | '>' | '=' | '!' => {
+                    iter.next();
+                    let (_, next_char) = iter.peek().unwrap();
+                    match next_char {
+                        '=' => {
+                            token = new_token(
+                                TokenType::RESERVED,
+                                0,
+                                format!("{}{}", val, next_char),
+                                token,
+                                *index,
+                            );
+                        }
+                        _ => {
+                            let s = String::from(*val);
+                            token = new_token(TokenType::RESERVED, 0, s, token, *index);
+                        }
+                    }
+                }
                 '+' | '-' | '*' | '/' | '(' | ')' => {
                     let s = String::from(*val);
                     token = new_token(TokenType::RESERVED, 0, s, token, *index);
@@ -100,13 +123,13 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
                 '0'..='9' => {
                     let index = *index;
                     let num = strtol(&mut iter);
-                    token = new_token(TokenType::NUM, num, String::from(""), token, index);
+                    token = new_token(TokenType::NUM, num, "".to_string(), token, index);
                 }
                 ' ' => {
                     iter.next();
                 }
                 _ => {
-                    error::error_at(str.clone(), *index, String::from("不明なトークンです"));
+                    error::error_at(str.clone(), *index, "不明なトークンです".to_string());
                     exit(1);
                 }
             },
