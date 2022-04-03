@@ -22,9 +22,26 @@ fn strtol<I: Iterator<Item = (usize, char)>>(iter: &mut Peekable<I>) -> i32 {
     result
 }
 
+fn strtocmp<I: Iterator<Item = (usize, char)>>(iter: &mut Peekable<I>) -> String {
+    let mut result: String = iter.peek().unwrap().1.to_string();
+    iter.next();
+    let c = iter.peek().unwrap().1;
+    match c {
+        '=' => {
+            result.push_str("=");
+            iter.next();
+        }
+        _ => {
+            return result;
+        }
+    }
+    result
+}
+
 #[derive(Debug, Clone)]
 pub enum TokenType {
     RESERVED,
+    CMP,
     NUM,
     EOF,
 }
@@ -95,44 +112,31 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
     let mut iter = str.chars().enumerate().peekable();
     loop {
         match iter.peek() {
-            Some((index, ref val)) => match val {
-                '<' | '>' | '=' | '!' => {
-                    iter.next();
-                    let (_, next_char) = iter.peek().unwrap();
-                    match next_char {
-                        '=' => {
-                            token = new_token(
-                                TokenType::RESERVED,
-                                0,
-                                format!("{}{}", val, next_char),
-                                token,
-                                *index,
-                            );
-                        }
-                        _ => {
-                            let s = String::from(*val);
-                            token = new_token(TokenType::RESERVED, 0, s, token, *index);
-                        }
+            Some((index, ref val)) => {
+                let index = *index;
+                match val {
+                    '<' | '>' | '=' | '!' => {
+                        let cmp = strtocmp(&mut iter);
+                        token = new_token(TokenType::CMP, 0, cmp, token, index);
+                    }
+                    '+' | '-' | '*' | '/' | '(' | ')' => {
+                        let s = String::from(*val);
+                        token = new_token(TokenType::RESERVED, 0, s, token, index);
+                        iter.next();
+                    }
+                    '0'..='9' => {
+                        let num = strtol(&mut iter);
+                        token = new_token(TokenType::NUM, num, "".to_string(), token, index);
+                    }
+                    ' ' => {
+                        iter.next();
+                    }
+                    _ => {
+                        error::error_at(str.clone(), index, "不明なトークンです".to_string());
+                        exit(1);
                     }
                 }
-                '+' | '-' | '*' | '/' | '(' | ')' => {
-                    let s = String::from(*val);
-                    token = new_token(TokenType::RESERVED, 0, s, token, *index);
-                    iter.next();
-                }
-                '0'..='9' => {
-                    let index = *index;
-                    let num = strtol(&mut iter);
-                    token = new_token(TokenType::NUM, num, "".to_string(), token, index);
-                }
-                ' ' => {
-                    iter.next();
-                }
-                _ => {
-                    error::error_at(str.clone(), *index, "不明なトークンです".to_string());
-                    exit(1);
-                }
-            },
+            }
             None => {
                 token = new_token(TokenType::EOF, 0, String::from(""), token, 0);
                 break;
