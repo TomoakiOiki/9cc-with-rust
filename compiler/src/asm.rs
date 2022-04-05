@@ -29,6 +29,26 @@ pub fn gen(node: &parse::Node) {
             println!("  cqo");
             println!("  idiv rdi");
         }
+        parse::NodeType::ND_EQ => {
+            println!("  cmp rax, rdi");
+            println!("  sete al");
+            println!("  movzb rax, al");
+        }
+        parse::NodeType::ND_NE => {
+            println!("  cmp rax, rdi");
+            println!("  setne al");
+            println!("  movzb rax, al");
+        }
+        parse::NodeType::ND_LT => {
+            println!("  cmp rax, rdi");
+            println!("  setl al");
+            println!("  movzb rax, al");
+        }
+        parse::NodeType::ND_LE => {
+            println!("  cmp rax, rdi");
+            println!("  setle al");
+            println!("  movzb rax, al");
+        }
         _ => {}
     }
 
