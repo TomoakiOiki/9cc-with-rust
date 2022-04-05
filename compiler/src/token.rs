@@ -41,7 +41,6 @@ fn strtocmp<I: Iterator<Item = (usize, char)>>(iter: &mut Peekable<I>) -> String
 #[derive(Debug, Clone)]
 pub enum TokenType {
     RESERVED,
-    CMP,
     NUM,
     EOF,
 }
@@ -55,7 +54,7 @@ pub struct Token {
     pub len: usize,
 }
 
-pub fn consume(op: String, iter: &mut Peekable<IntoIter<Token>>) -> bool {
+pub fn consume(op: &str, iter: &mut Peekable<IntoIter<Token>>) -> bool {
     let token = iter.peek().unwrap().clone();
     if !matches!(token.token_type, TokenType::RESERVED) || token.len != op.len() || token.str != op
     {
@@ -84,10 +83,10 @@ pub fn expect_number(iter: &mut Peekable<IntoIter<Token>>) -> i32 {
     token.val
 }
 
-pub fn at_eof(iter: &mut Peekable<IntoIter<Token>>) -> bool {
-    let token = iter.peek().unwrap();
-    matches!(token.token_type, TokenType::EOF)
-}
+// pub fn at_eof(iter: &mut Peekable<IntoIter<Token>>) -> bool {
+//     let token = iter.peek().unwrap();
+//     matches!(token.token_type, TokenType::EOF)
+// }
 
 fn new_token(
     token_type: TokenType,
@@ -117,7 +116,7 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
                 match val {
                     '<' | '>' | '=' | '!' => {
                         let cmp = strtocmp(&mut iter);
-                        token = new_token(TokenType::CMP, 0, cmp, token, index);
+                        token = new_token(TokenType::RESERVED, 0, cmp, token, index);
                     }
                     '+' | '-' | '*' | '/' | '(' | ')' => {
                         let s = String::from(*val);
