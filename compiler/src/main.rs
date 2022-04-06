@@ -14,12 +14,28 @@ fn main() {
     }
     let input = args[1].clone();
     let token: LinkedList<token::Token> = token::tokenize(&input);
-    let mut node = parse::expr(&mut token.into_iter().peekable());
+    // println!("{:?}", token);
+    let mut code: Vec<parse::Node> = vec![];
+    parse::program(&mut token.into_iter().peekable(), &mut code);
+    println!("{:?}", code);
 
     println!(".intel_syntax noprefix");
     println!(".global main");
     println!("main:");
-    asm::gen(&mut node);
-    println!("  pop rax");
+
+    // プロローグ
+    // 変数26個分の領域を確保する
+    println!("  push rbp");
+    println!("  mov rbp, rsp");
+    println!("  sub rsp, 208");
+
+    for line in code {
+        asm::gen(&line);
+        println!("  pop rax");
+    }
+    // エピローグ
+    // 最後の式の結果がRAXに残っているのでそれが返り値になる
+    println!("  mov rsp, rbp");
+    println!("  pop rbp");
     println!("  ret");
 }

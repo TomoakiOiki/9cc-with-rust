@@ -41,6 +41,7 @@ fn strtocmp<I: Iterator<Item = (usize, char)>>(iter: &mut Peekable<I>) -> String
 #[derive(Debug, Clone)]
 pub enum TokenType {
     RESERVED,
+    IDENT,
     NUM,
     EOF,
 }
@@ -58,6 +59,15 @@ pub fn consume(op: &str, iter: &mut Peekable<IntoIter<Token>>) -> bool {
     let token = iter.peek().unwrap().clone();
     if !matches!(token.token_type, TokenType::RESERVED) || token.len != op.len() || token.str != op
     {
+        return false;
+    }
+    iter.next();
+    true
+}
+
+pub fn consume_ident(op: &str, iter: &mut Peekable<IntoIter<Token>>) -> bool {
+    let token = iter.peek().unwrap().clone();
+    if !matches!(token.token_type, TokenType::IDENT) || token.str != op {
         return false;
     }
     iter.next();
@@ -83,10 +93,10 @@ pub fn expect_number(iter: &mut Peekable<IntoIter<Token>>) -> i32 {
     token.val
 }
 
-// pub fn at_eof(iter: &mut Peekable<IntoIter<Token>>) -> bool {
-//     let token = iter.peek().unwrap();
-//     matches!(token.token_type, TokenType::EOF)
-// }
+pub fn at_eof(iter: &mut Peekable<IntoIter<Token>>) -> bool {
+    let token = iter.peek().unwrap();
+    matches!(token.token_type, TokenType::EOF)
+}
 
 fn new_token(
     token_type: TokenType,
@@ -112,6 +122,7 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
     loop {
         match iter.peek() {
             Some((index, ref val)) => {
+                // println!("{}", val);
                 let index = *index;
                 match val {
                     '<' | '>' | '=' | '!' => {
@@ -127,7 +138,11 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
                         let num = strtol(&mut iter);
                         token = new_token(TokenType::NUM, num, "".to_string(), token, index);
                     }
-                    ' ' => {
+                    'a'..='z' => {
+                        token = new_token(TokenType::IDENT, 0, val.to_string(), token, index);
+                        iter.next();
+                    }
+                    ' ' | ';' => {
                         iter.next();
                     }
                     _ => {
