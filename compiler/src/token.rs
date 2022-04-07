@@ -65,9 +65,9 @@ pub fn consume(op: &str, iter: &mut Peekable<IntoIter<Token>>) -> bool {
     true
 }
 
-pub fn consume_ident(op: &str, iter: &mut Peekable<IntoIter<Token>>) -> bool {
+pub fn consume_ident(iter: &mut Peekable<IntoIter<Token>>) -> bool {
     let token = iter.peek().unwrap().clone();
-    if !matches!(token.token_type, TokenType::IDENT) || token.str != op {
+    if !matches!(token.token_type, TokenType::IDENT) {
         return false;
     }
     iter.next();
@@ -81,6 +81,15 @@ pub fn expect(op: char, iter: &mut Peekable<IntoIter<Token>>) {
         process::exit(1);
     }
     iter.next();
+}
+
+pub fn expect_ident(iter: &mut Peekable<IntoIter<Token>>) -> String {
+    let token = iter.peek().unwrap().clone();
+    if !matches!(token.token_type, TokenType::IDENT) {
+        process::exit(1);
+    }
+    iter.next();
+    token.str
 }
 
 pub fn expect_number(iter: &mut Peekable<IntoIter<Token>>) -> i32 {
@@ -129,7 +138,7 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
                         let cmp = strtocmp(&mut iter);
                         token = new_token(TokenType::RESERVED, 0, cmp, token, index);
                     }
-                    '+' | '-' | '*' | '/' | '(' | ')' => {
+                    '+' | '-' | '*' | '/' | '(' | ')' | ';' => {
                         let s = String::from(*val);
                         token = new_token(TokenType::RESERVED, 0, s, token, index);
                         iter.next();
@@ -142,7 +151,7 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
                         token = new_token(TokenType::IDENT, 0, val.to_string(), token, index);
                         iter.next();
                     }
-                    ' ' | ';' => {
+                    ' ' => {
                         iter.next();
                     }
                     _ => {
