@@ -6,8 +6,10 @@ pub fn gen_lval(node: &parse::Node) {
         panic!("代入の左辺値が変数ではありません");
     }
 
+    let offset = (node.name.as_bytes()[0] - 'a' as u8 + 1) * 8;
+
     println!("  mov rax, rbp");
-    println!("  sub rax, {}", node.offset);
+    println!("  sub rax, {}", offset);
     println!("  push rax");
 }
 

@@ -24,7 +24,7 @@ pub struct Node {
     pub lhs: Option<Box<Node>>,
     pub rhs: Option<Box<Node>>,
     pub val: i32,
-    pub offset: u8,
+    pub name: String,
 }
 
 pub fn new_node(node_type: NodeType, lhs: Box<Node>, rhs: Box<Node>) -> Node {
@@ -33,7 +33,7 @@ pub fn new_node(node_type: NodeType, lhs: Box<Node>, rhs: Box<Node>) -> Node {
         lhs: Some(lhs),
         rhs: Some(rhs),
         val: 0,
-        offset: 0,
+        name: "".to_string(),
     }
 }
 
@@ -43,15 +43,24 @@ pub fn new_num_node(val: i32) -> Node {
         lhs: None,
         rhs: None,
         val: val,
-        offset: 0,
+        name: "".to_string(),
+    }
+}
+
+pub fn new_var_node(name: String) -> Node {
+    Node {
+        node_type: NodeType::ND_LVAR,
+        lhs: None,
+        rhs: None,
+        val: 0,
+        name: name,
     }
 }
 
 pub fn program(iter: &mut Peekable<IntoIter<Token>>, code: &mut Vec<Node>) {
+    println!("{:?}", iter.peek());
     while !token::at_eof(iter) {
-        println!("{:?}", iter.peek());
         code.push(stmt(iter));
-        iter.next();
     }
 }
 
@@ -70,6 +79,7 @@ fn expr(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 fn assign(iter: &mut Peekable<IntoIter<Token>>) -> Node {
     println!("assign: {:?}", iter.peek());
     let mut node = equality(iter);
+    println!("{:?}", iter.peek());
     if token::consume("=", iter) {
         node = new_node(NodeType::ND_ASSIGN, Box::new(node), Box::new(assign(iter)));
     }
@@ -155,15 +165,9 @@ pub fn unary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 
 pub fn primary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
     println!("primary: {:?}", iter.peek());
-    if token::consume_ident("=", iter) {
-        let offset = (iter.peek().unwrap().str.as_bytes()[0] - 'a' as u8 + 1) * 8;
-        let node = Node {
-            node_type: NodeType::ND_LVAR,
-            lhs: None,
-            rhs: None,
-            val: 0,
-            offset: offset,
-        };
+    let token = iter.peek().unwrap().clone();
+    if token::consume_ident(iter) {
+        let node = new_var_node(token.str.clone());
         return node;
     }
 
