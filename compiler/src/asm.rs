@@ -14,9 +14,6 @@ pub fn gen_lval(node: &parse::Node) {
 }
 
 pub fn gen(node: &parse::Node) {
-    let lhs = &**node.lhs.as_ref().unwrap();
-    let rhs = &**node.rhs.as_ref().unwrap();
-
     match node.node_type {
         NodeType::ND_NUM => {
             println!("  push {}", node.val);
@@ -29,6 +26,13 @@ pub fn gen(node: &parse::Node) {
             println!("  push rax");
             return;
         }
+        _ => {}
+    }
+
+    let lhs = &**node.lhs.as_ref().unwrap();
+    let rhs = &**node.rhs.as_ref().unwrap();
+
+    match node.node_type {
         NodeType::ND_ASSIGN => {
             gen_lval(lhs);
             gen(rhs);
