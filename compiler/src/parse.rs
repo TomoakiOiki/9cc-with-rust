@@ -1,7 +1,7 @@
 use std::{collections::linked_list::IntoIter, iter::Peekable};
 
-use crate::token;
 use crate::token::Token;
+use crate::{token, CODE, TOKEN};
 
 #[derive(Debug)]
 pub enum NodeType {
@@ -57,29 +57,29 @@ pub fn new_var_node(name: String) -> Node {
     }
 }
 
-pub fn program(iter: &mut Peekable<IntoIter<Token>>, code: &mut Vec<Node>) {
-    println!("{:?}", iter.peek());
-    while !token::at_eof(iter) {
-        code.push(stmt(iter));
-    }
+pub fn program() {
+    TOKEN.with(|t| {
+        CODE.with(|c| {
+            let mut iter = t.clone().into_inner().into_iter().peekable();
+            while !token::at_eof(&mut iter) {
+                c.borrow_mut().push(stmt(&mut iter));
+            }
+        })
+    })
 }
 
 fn stmt(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    println!("stmt: {:?}", iter.peek());
     let node = expr(iter);
     token::expect(';', iter);
     node
 }
 
 fn expr(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    println!("expr: {:?}", iter.peek());
     return assign(iter);
 }
 
 fn assign(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    println!("assign: {:?}", iter.peek());
     let mut node = equality(iter);
-    println!("{:?}", iter.peek());
     if token::consume("=", iter) {
         node = new_node(NodeType::ND_ASSIGN, Box::new(node), Box::new(assign(iter)));
     }
@@ -87,7 +87,6 @@ fn assign(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 }
 
 pub fn equality(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    println!("equality: {:?}", iter.peek());
     let mut node = relational(iter);
     loop {
         if token::consume("==", iter) {
@@ -101,7 +100,6 @@ pub fn equality(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 }
 
 pub fn relational(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    println!("relational: {:?}", iter.peek());
     let mut node = add(iter);
 
     loop {
@@ -120,7 +118,6 @@ pub fn relational(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 }
 
 pub fn add(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    println!("add: {:?}", iter.peek());
     let mut node = mul(iter);
 
     loop {
@@ -135,7 +132,6 @@ pub fn add(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 }
 
 pub fn mul(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    println!("mul: {:?}", iter.peek());
     let mut node = unary(iter);
 
     loop {
@@ -150,7 +146,6 @@ pub fn mul(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 }
 
 pub fn unary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    println!("unary: {:?}", iter.peek());
     if token::consume("+", iter) {
         return primary(iter);
     } else if token::consume("-", iter) {
@@ -164,7 +159,6 @@ pub fn unary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 }
 
 pub fn primary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    println!("primary: {:?}", iter.peek());
     let token = iter.peek().unwrap().clone();
     if token::consume_ident(iter) {
         let node = new_var_node(token.str.clone());
