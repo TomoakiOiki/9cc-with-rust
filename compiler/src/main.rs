@@ -17,7 +17,6 @@ fn main() {
     // println!("{:?}", token);
     let mut code: Vec<parse::Node> = vec![];
     parse::program(&mut token.into_iter().peekable(), &mut code);
-    println!("{:?}", code);
 
     println!(".intel_syntax noprefix");
     println!(".global main");
