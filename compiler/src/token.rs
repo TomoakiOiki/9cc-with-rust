@@ -1,9 +1,11 @@
 use error;
 use std::{
-    collections::{linked_list::IntoIter, LinkedList},
+    collections::linked_list::IntoIter,
     iter::Peekable,
     process::{self, exit},
 };
+
+use crate::{LOCALS, TOKEN};
 
 fn strtol<I: Iterator<Item = (usize, char)>>(iter: &mut Peekable<I>) -> i32 {
     let mut result: i32 = 0;
@@ -38,6 +40,22 @@ fn strtocmp<I: Iterator<Item = (usize, char)>>(iter: &mut Peekable<I>) -> String
     result
 }
 
+fn strtovar<I: Iterator<Item = (usize, char)>>(iter: &mut Peekable<I>) -> String {
+    let mut result: String = iter.peek().unwrap().1.to_string();
+    iter.next();
+    let c = iter.peek().unwrap().1;
+    match c {
+        'a'..='z' => {
+            result.push_str(c.to_string().as_str());
+            iter.next();
+        }
+        _ => {
+            return result;
+        }
+    }
+    result
+}
+
 #[derive(Debug, Clone)]
 pub enum TokenType {
     RESERVED,
@@ -53,6 +71,11 @@ pub struct Token {
     pub pos: usize,
     pub str: String,
     pub len: usize,
+}
+
+pub struct LVar {
+    pub name: String,
+    pub offset: usize,
 }
 
 pub fn consume(op: &str, iter: &mut Peekable<IntoIter<Token>>) -> bool {
@@ -102,31 +125,38 @@ pub fn expect_number(iter: &mut Peekable<IntoIter<Token>>) -> i32 {
     token.val
 }
 
+pub fn find_lvar(token: Token) -> Option<LVar> {
+    let mut result = None;
+    LOCALS.with(|locals| {
+        let locals = locals.borrow_mut().iter();
+        for lvar in locals {
+            if lvar.name == token.str {
+                result = Some(lvar);
+            }
+        }
+    });
+    result
+}
+
 pub fn at_eof(iter: &mut Peekable<IntoIter<Token>>) -> bool {
     let token = iter.peek().unwrap();
     matches!(token.token_type, TokenType::EOF)
 }
 
-fn new_token(
-    token_type: TokenType,
-    val: i32,
-    str: String,
-    mut cur: LinkedList<Token>,
-    pos: usize,
-) -> LinkedList<Token> {
-    let len = str.len();
-    cur.push_back(Token {
-        token_type: token_type,
-        val: val,
-        str: str,
-        pos: pos,
-        len: len,
+fn new_token(token_type: TokenType, val: i32, str: String, pos: usize) {
+    TOKEN.with(|tokens| {
+        let len = str.len();
+        tokens.borrow_mut().push_back(Token {
+            token_type: token_type,
+            val: val,
+            str: str,
+            pos: pos,
+            len: len,
+        });
     });
-    cur
 }
 
-pub fn tokenize(str: &String) -> LinkedList<Token> {
-    let mut token: LinkedList<Token> = LinkedList::new();
+pub fn tokenize(str: &String) {
     let mut iter = str.chars().enumerate().peekable();
     loop {
         match iter.peek() {
@@ -136,19 +166,20 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
                 match val {
                     '<' | '>' | '=' | '!' => {
                         let cmp = strtocmp(&mut iter);
-                        token = new_token(TokenType::RESERVED, 0, cmp, token, index);
+                        new_token(TokenType::RESERVED, 0, cmp, index);
                     }
                     '+' | '-' | '*' | '/' | '(' | ')' | ';' => {
                         let s = String::from(*val);
-                        token = new_token(TokenType::RESERVED, 0, s, token, index);
+                        new_token(TokenType::RESERVED, 0, s, index);
                         iter.next();
                     }
                     '0'..='9' => {
                         let num = strtol(&mut iter);
-                        token = new_token(TokenType::NUM, num, "".to_string(), token, index);
+                        new_token(TokenType::NUM, num, "".to_string(), index);
                     }
                     'a'..='z' => {
-                        token = new_token(TokenType::IDENT, 0, val.to_string(), token, index);
+                        let var_name = strtovar(&mut iter);
+                        new_token(TokenType::IDENT, 0, var_name, index);
                         iter.next();
                     }
                     ' ' => {
@@ -161,10 +192,9 @@ pub fn tokenize(str: &String) -> LinkedList<Token> {
                 }
             }
             None => {
-                token = new_token(TokenType::EOF, 0, String::from(""), token, 0);
+                new_token(TokenType::EOF, 0, String::from(""), 0);
                 break;
             }
         }
     }
-    token
 }

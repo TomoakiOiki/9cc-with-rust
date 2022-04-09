@@ -3,7 +3,23 @@ mod error;
 mod parse;
 mod token;
 
+use std::cell::RefCell;
 use std::collections::LinkedList;
+
+thread_local! {
+    static TOKEN: RefCell<LinkedList<token::Token>> = {
+        let v: LinkedList<token::Token> = LinkedList::new();
+        RefCell::new(v)
+    };
+    static CODE: RefCell<Vec<parse::Node>> = {
+        let v: Vec<parse::Node> = Vec::new();
+        RefCell::new(v)
+    };
+    static LOCALS: RefCell<Vec<token::LVar>> = {
+        let v: Vec<token::LVar> = Vec::new();
+        RefCell::new(v)
+    };
+}
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -13,11 +29,9 @@ fn main() {
         std::process::exit(1);
     }
     let input = args[1].clone();
-    let token: LinkedList<token::Token> = token::tokenize(&input);
+    token::tokenize(&input);
     // println!("{:?}", token);
-    let mut code: Vec<parse::Node> = vec![];
-    parse::program(&mut token.into_iter().peekable(), &mut code);
-
+    parse::program();
     println!(".intel_syntax noprefix");
     println!(".global main");
     println!("main:");
@@ -28,10 +42,12 @@ fn main() {
     println!("  mov rbp, rsp");
     println!("  sub rsp, 208");
 
-    for line in code {
-        asm::gen(&line);
-        println!("  pop rax");
-    }
+    CODE.with(|c| {
+        for line in c.borrow_mut().iter() {
+            asm::gen(&line);
+            println!("  pop rax");
+        }
+    });
     // エピローグ
     // 最後の式の結果がRAXに残っているのでそれが返り値になる
     println!("  mov rsp, rbp");

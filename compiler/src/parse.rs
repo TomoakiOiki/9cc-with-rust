@@ -1,7 +1,7 @@
 use std::{collections::linked_list::IntoIter, iter::Peekable};
 
-use crate::token;
 use crate::token::Token;
+use crate::{token, CODE, TOKEN};
 
 #[derive(Debug)]
 pub enum NodeType {
@@ -57,10 +57,15 @@ pub fn new_var_node(name: String) -> Node {
     }
 }
 
-pub fn program(iter: &mut Peekable<IntoIter<Token>>, code: &mut Vec<Node>) {
-    while !token::at_eof(iter) {
-        code.push(stmt(iter));
-    }
+pub fn program() {
+    TOKEN.with(|t| {
+        CODE.with(|c| {
+            let mut iter = t.clone().into_inner().into_iter().peekable();
+            while !token::at_eof(&mut iter) {
+                c.borrow_mut().push(stmt(&mut iter));
+            }
+        })
+    })
 }
 
 fn stmt(iter: &mut Peekable<IntoIter<Token>>) -> Node {
