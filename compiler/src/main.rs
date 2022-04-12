@@ -40,7 +40,10 @@ fn main() {
     // 変数26個分の領域を確保する
     println!("  push rbp");
     println!("  mov rbp, rsp");
-    println!("  sub rsp, 208");
+    LOCALS.with(|locals| {
+        let len = locals.borrow().len();
+        println!("  sub rsp, {}", len * 8);
+    });
 
     CODE.with(|c| {
         for line in c.borrow_mut().iter() {
