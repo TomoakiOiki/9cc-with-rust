@@ -73,6 +73,7 @@ pub struct Token {
     pub len: usize,
 }
 
+#[derive(Debug, Clone)]
 pub struct LVar {
     pub name: String,
     pub offset: usize,
@@ -106,14 +107,14 @@ pub fn expect(op: char, iter: &mut Peekable<IntoIter<Token>>) {
     iter.next();
 }
 
-pub fn expect_ident(iter: &mut Peekable<IntoIter<Token>>) -> String {
-    let token = iter.peek().unwrap().clone();
-    if !matches!(token.token_type, TokenType::IDENT) {
-        process::exit(1);
-    }
-    iter.next();
-    token.str
-}
+// pub fn expect_ident(iter: &mut Peekable<IntoIter<Token>>) -> String {
+//     let token = iter.peek().unwrap().clone();
+//     if !matches!(token.token_type, TokenType::IDENT) {
+//         process::exit(1);
+//     }
+//     iter.next();
+//     token.str
+// }
 
 pub fn expect_number(iter: &mut Peekable<IntoIter<Token>>) -> i32 {
     let token = iter.peek().unwrap().clone();
@@ -126,12 +127,12 @@ pub fn expect_number(iter: &mut Peekable<IntoIter<Token>>) -> i32 {
 }
 
 pub fn find_lvar(token: Token) -> Option<LVar> {
-    let mut result = None;
+    let mut result: Option<LVar> = None;
     LOCALS.with(|locals| {
-        let locals = locals.borrow_mut().iter();
-        for lvar in locals {
+        let locals = locals.borrow();
+        for lvar in locals.iter() {
             if lvar.name == token.str {
-                result = Some(lvar);
+                result = Some(lvar.clone());
             }
         }
     });

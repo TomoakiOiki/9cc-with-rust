@@ -2,24 +2,22 @@ use crate::parse;
 use crate::parse::NodeType;
 
 pub fn gen_lval(node: &parse::Node) {
-    if !matches!(node.node_type, NodeType::ND_LVAR) {
+    if !matches!(node.node_type, NodeType::LVAR) {
         panic!("代入の左辺値が変数ではありません");
     }
 
-    let offset = (node.name.as_bytes()[0] - 'a' as u8 + 1) * 8;
-
     println!("  mov rax, rbp");
-    println!("  sub rax, {}", offset);
+    println!("  sub rax, {}", node.offset);
     println!("  push rax");
 }
 
 pub fn gen(node: &parse::Node) {
     match node.node_type {
-        NodeType::ND_NUM => {
+        NodeType::NUM => {
             println!("  push {}", node.val);
             return;
         }
-        NodeType::ND_LVAR => {
+        NodeType::LVAR => {
             gen_lval(node);
             println!("  pop rax");
             println!("  mov rax, [rax]");
@@ -33,7 +31,7 @@ pub fn gen(node: &parse::Node) {
     let rhs = &**node.rhs.as_ref().unwrap();
 
     match node.node_type {
-        NodeType::ND_ASSIGN => {
+        NodeType::ASSIGN => {
             gen_lval(lhs);
             gen(rhs);
             println!("  pop rdi");
@@ -52,35 +50,35 @@ pub fn gen(node: &parse::Node) {
     println!("  pop rax");
 
     match node.node_type {
-        NodeType::ND_ADD => {
+        NodeType::ADD => {
             println!("  add rax, rdi");
         }
-        NodeType::ND_SUB => {
+        NodeType::SUB => {
             println!("  sub rax, rdi");
         }
-        NodeType::ND_MUL => {
+        NodeType::MUL => {
             println!("  imul rax, rdi");
         }
-        NodeType::ND_DIV => {
+        NodeType::DIV => {
             println!("  cqo");
             println!("  idiv rdi");
         }
-        NodeType::ND_EQ => {
+        NodeType::EQ => {
             println!("  cmp rax, rdi");
             println!("  sete al");
             println!("  movzb rax, al");
         }
-        NodeType::ND_NE => {
+        NodeType::NE => {
             println!("  cmp rax, rdi");
             println!("  setne al");
             println!("  movzb rax, al");
         }
-        NodeType::ND_LT => {
+        NodeType::LT => {
             println!("  cmp rax, rdi");
             println!("  setl al");
             println!("  movzb rax, al");
         }
-        NodeType::ND_LE => {
+        NodeType::LE => {
             println!("  cmp rax, rdi");
             println!("  setle al");
             println!("  movzb rax, al");
