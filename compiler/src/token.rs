@@ -182,7 +182,14 @@ pub fn tokenize(str: &String) {
                     }
                     'a'..='z' => {
                         let var_name = strtovar(&mut iter);
-                        new_token(TokenType::IDENT, 0, var_name, index);
+                        match var_name.as_str() {
+                            "return" => {
+                                new_token(TokenType::RETURN, 0, "return".to_string(), index);
+                            }
+                            _ => {
+                                new_token(TokenType::IDENT, 0, var_name, index);
+                            }
+                        }
                     }
                     ' ' => {
                         iter.next();
