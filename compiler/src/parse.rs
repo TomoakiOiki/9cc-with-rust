@@ -1,6 +1,6 @@
 use std::{collections::linked_list::IntoIter, iter::Peekable};
 
-use crate::token::{LVar, Token};
+use crate::token::{LVar, Token, TokenType};
 use crate::{token, CODE, LOCALS, TOKEN};
 
 #[derive(Debug)]
@@ -16,6 +16,7 @@ pub enum NodeType {
     ASSIGN, // =
     LVAR,   // ローカル変数
     NUM,    // 整数
+    RETURN, // return文
 }
 
 #[derive(Debug)]
@@ -28,11 +29,11 @@ pub struct Node {
     pub offset: usize,
 }
 
-pub fn new_node(node_type: NodeType, lhs: Box<Node>, rhs: Box<Node>) -> Node {
+pub fn new_node(node_type: NodeType, lhs: Option<Box<Node>>, rhs: Option<Box<Node>>) -> Node {
     Node {
         node_type,
-        lhs: Some(lhs),
-        rhs: Some(rhs),
+        lhs: lhs,
+        rhs: rhs,
         val: 0,
         name: "".to_string(),
         offset: 0,
@@ -73,7 +74,11 @@ pub fn program() {
 }
 
 fn stmt(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    let node = expr(iter);
+    let consumed_return = token::consume("return", iter, TokenType::RETURN);
+    let node = match consumed_return {
+        true => new_node(NodeType::RETURN, Some(Box::new(expr(iter))), None),
+        false => expr(iter),
+    };
     token::expect(';', iter);
     node
 }
@@ -84,8 +89,12 @@ fn expr(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 
 fn assign(iter: &mut Peekable<IntoIter<Token>>) -> Node {
     let mut node = equality(iter);
-    if token::consume("=", iter) {
-        node = new_node(NodeType::ASSIGN, Box::new(node), Box::new(assign(iter)));
+    if token::consume("=", iter, TokenType::RESERVED) {
+        node = new_node(
+            NodeType::ASSIGN,
+            Some(Box::new(node)),
+            Some(Box::new(assign(iter))),
+        );
     }
     node
 }
@@ -93,10 +102,18 @@ fn assign(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 pub fn equality(iter: &mut Peekable<IntoIter<Token>>) -> Node {
     let mut node = relational(iter);
     loop {
-        if token::consume("==", iter) {
-            node = new_node(NodeType::EQ, Box::new(node), Box::new(relational(iter)))
-        } else if token::consume("!=", iter) {
-            node = new_node(NodeType::NE, Box::new(node), Box::new(relational(iter)))
+        if token::consume("==", iter, TokenType::RESERVED) {
+            node = new_node(
+                NodeType::EQ,
+                Some(Box::new(node)),
+                Some(Box::new(relational(iter))),
+            )
+        } else if token::consume("!=", iter, TokenType::RESERVED) {
+            node = new_node(
+                NodeType::NE,
+                Some(Box::new(node)),
+                Some(Box::new(relational(iter))),
+            );
         } else {
             return node;
         }
@@ -107,14 +124,30 @@ pub fn relational(iter: &mut Peekable<IntoIter<Token>>) -> Node {
     let mut node = add(iter);
 
     loop {
-        if token::consume("<", iter) {
-            node = new_node(NodeType::LT, Box::new(node), Box::new(add(iter)))
-        } else if token::consume(">", iter) {
-            node = new_node(NodeType::LT, Box::new(add(iter)), Box::new(node))
-        } else if token::consume("<=", iter) {
-            node = new_node(NodeType::LE, Box::new(node), Box::new(add(iter)))
-        } else if token::consume(">=", iter) {
-            node = new_node(NodeType::LE, Box::new(add(iter)), Box::new(node))
+        if token::consume("<", iter, TokenType::RESERVED) {
+            node = new_node(
+                NodeType::LT,
+                Some(Box::new(node)),
+                Some(Box::new(add(iter))),
+            )
+        } else if token::consume(">", iter, TokenType::RESERVED) {
+            node = new_node(
+                NodeType::LT,
+                Some(Box::new(add(iter))),
+                Some(Box::new(node)),
+            )
+        } else if token::consume("<=", iter, TokenType::RESERVED) {
+            node = new_node(
+                NodeType::LE,
+                Some(Box::new(node)),
+                Some(Box::new(add(iter))),
+            )
+        } else if token::consume(">=", iter, TokenType::RESERVED) {
+            node = new_node(
+                NodeType::LE,
+                Some(Box::new(add(iter))),
+                Some(Box::new(node)),
+            )
         } else {
             return node;
         }
@@ -125,10 +158,18 @@ pub fn add(iter: &mut Peekable<IntoIter<Token>>) -> Node {
     let mut node = mul(iter);
 
     loop {
-        if token::consume("+", iter) {
-            node = new_node(NodeType::ADD, Box::new(node), Box::new(mul(iter)))
-        } else if token::consume("-", iter) {
-            node = new_node(NodeType::SUB, Box::new(node), Box::new(mul(iter)))
+        if token::consume("+", iter, TokenType::RESERVED) {
+            node = new_node(
+                NodeType::ADD,
+                Some(Box::new(node)),
+                Some(Box::new(mul(iter))),
+            )
+        } else if token::consume("-", iter, TokenType::RESERVED) {
+            node = new_node(
+                NodeType::SUB,
+                Some(Box::new(node)),
+                Some(Box::new(mul(iter))),
+            )
         } else {
             return node;
         }
@@ -139,10 +180,18 @@ pub fn mul(iter: &mut Peekable<IntoIter<Token>>) -> Node {
     let mut node = unary(iter);
 
     loop {
-        if token::consume("*", iter) {
-            node = new_node(NodeType::MUL, Box::new(node), Box::new(unary(iter)))
-        } else if token::consume("/", iter) {
-            node = new_node(NodeType::DIV, Box::new(node), Box::new(unary(iter)))
+        if token::consume("*", iter, TokenType::RESERVED) {
+            node = new_node(
+                NodeType::MUL,
+                Some(Box::new(node)),
+                Some(Box::new(unary(iter))),
+            )
+        } else if token::consume("/", iter, TokenType::RESERVED) {
+            node = new_node(
+                NodeType::DIV,
+                Some(Box::new(node)),
+                Some(Box::new(unary(iter))),
+            )
         } else {
             return node;
         }
@@ -150,13 +199,13 @@ pub fn mul(iter: &mut Peekable<IntoIter<Token>>) -> Node {
 }
 
 pub fn unary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
-    if token::consume("+", iter) {
+    if token::consume("+", iter, TokenType::RESERVED) {
         return primary(iter);
-    } else if token::consume("-", iter) {
+    } else if token::consume("-", iter, TokenType::RESERVED) {
         return new_node(
             NodeType::SUB,
-            Box::new(new_num_node(0)),
-            Box::new(unary(iter)),
+            Some(Box::new(new_num_node(0))),
+            Some(Box::new(unary(iter))),
         );
     }
     return primary(iter);
@@ -183,7 +232,7 @@ pub fn primary(iter: &mut Peekable<IntoIter<Token>>) -> Node {
         return node;
     }
 
-    if token::consume("(", iter) {
+    if token::consume("(", iter, TokenType::RESERVED) {
         let node = expr(iter);
         token::expect(')', iter);
         return node;

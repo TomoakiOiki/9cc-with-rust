@@ -43,14 +43,16 @@ fn strtocmp<I: Iterator<Item = (usize, char)>>(iter: &mut Peekable<I>) -> String
 fn strtovar<I: Iterator<Item = (usize, char)>>(iter: &mut Peekable<I>) -> String {
     let mut result: String = iter.peek().unwrap().1.to_string();
     iter.next();
-    let c = iter.peek().unwrap().1;
-    match c {
-        'a'..='z' => {
-            result.push_str(c.to_string().as_str());
-            iter.next();
-        }
-        _ => {
-            return result;
+    loop {
+        let c = iter.peek().unwrap().1;
+        match c {
+            'a'..='z' => {
+                result.push_str(c.to_string().as_str());
+                iter.next();
+            }
+            _ => {
+                break;
+            }
         }
     }
     result
@@ -61,6 +63,7 @@ pub enum TokenType {
     RESERVED,
     IDENT,
     NUM,
+    RETURN,
     EOF,
 }
 
@@ -79,10 +82,9 @@ pub struct LVar {
     pub offset: usize,
 }
 
-pub fn consume(op: &str, iter: &mut Peekable<IntoIter<Token>>) -> bool {
+pub fn consume(op: &str, iter: &mut Peekable<IntoIter<Token>>, token_type: TokenType) -> bool {
     let token = iter.peek().unwrap().clone();
-    if !matches!(token.token_type, TokenType::RESERVED) || token.len != op.len() || token.str != op
-    {
+    if !matches!(token.token_type, token_type) || token.len != op.len() || token.str != op {
         return false;
     }
     iter.next();
@@ -180,8 +182,14 @@ pub fn tokenize(str: &String) {
                     }
                     'a'..='z' => {
                         let var_name = strtovar(&mut iter);
-                        new_token(TokenType::IDENT, 0, var_name, index);
-                        iter.next();
+                        match var_name.as_str() {
+                            "return" => {
+                                new_token(TokenType::RETURN, 0, "return".to_string(), index);
+                            }
+                            _ => {
+                                new_token(TokenType::IDENT, 0, var_name, index);
+                            }
+                        }
                     }
                     ' ' => {
                         iter.next();
