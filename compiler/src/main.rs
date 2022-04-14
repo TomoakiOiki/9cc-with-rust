@@ -30,7 +30,6 @@ fn main() {
     }
     let input = args[1].clone();
     token::tokenize(&input);
-    // println!("{:?}", token);
     parse::program();
     println!(".intel_syntax noprefix");
     println!(".global main");

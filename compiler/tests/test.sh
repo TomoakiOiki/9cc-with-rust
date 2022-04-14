@@ -43,10 +43,13 @@ assert 1 '1>=0;'
 assert 1 '1>=1;'
 assert 0 '1>=2;'
 
-assert 3 '1; 2; 3;'
+assert 3 '1; 2; 3; '
 
 assert 3 'a=3; a;'
 assert 8 'a=3; z=5; a+z;'
 assert 6 'a=b=3; a+b;'
+
+assert 3 'foo=1; bar=2; foo+bar;'
+assert 2 'hoge=fuga=1; hoge+fuga;'
 
 echo OK

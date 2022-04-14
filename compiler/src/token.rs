@@ -43,14 +43,16 @@ fn strtocmp<I: Iterator<Item = (usize, char)>>(iter: &mut Peekable<I>) -> String
 fn strtovar<I: Iterator<Item = (usize, char)>>(iter: &mut Peekable<I>) -> String {
     let mut result: String = iter.peek().unwrap().1.to_string();
     iter.next();
-    let c = iter.peek().unwrap().1;
-    match c {
-        'a'..='z' => {
-            result.push_str(c.to_string().as_str());
-            iter.next();
-        }
-        _ => {
-            return result;
+    loop {
+        let c = iter.peek().unwrap().1;
+        match c {
+            'a'..='z' => {
+                result.push_str(c.to_string().as_str());
+                iter.next();
+            }
+            _ => {
+                break;
+            }
         }
     }
     result
@@ -181,7 +183,6 @@ pub fn tokenize(str: &String) {
                     'a'..='z' => {
                         let var_name = strtovar(&mut iter);
                         new_token(TokenType::IDENT, 0, var_name, index);
-                        iter.next();
                     }
                     ' ' => {
                         iter.next();
