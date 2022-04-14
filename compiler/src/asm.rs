@@ -24,6 +24,15 @@ pub fn gen(node: &parse::Node) {
             println!("  push rax");
             return;
         }
+        NodeType::RETURN => {
+            let lhs = &**node.lhs.as_ref().unwrap();
+            gen(lhs);
+            println!("  pop rax");
+            println!("  mov rsp, rbp");
+            println!("  pop rbp");
+            println!("  ret");
+            return;
+        }
         _ => {}
     }
 

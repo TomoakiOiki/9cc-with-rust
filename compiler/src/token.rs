@@ -63,6 +63,7 @@ pub enum TokenType {
     RESERVED,
     IDENT,
     NUM,
+    RETURN,
     EOF,
 }
 
@@ -81,10 +82,9 @@ pub struct LVar {
     pub offset: usize,
 }
 
-pub fn consume(op: &str, iter: &mut Peekable<IntoIter<Token>>) -> bool {
+pub fn consume(op: &str, iter: &mut Peekable<IntoIter<Token>>, token_type: TokenType) -> bool {
     let token = iter.peek().unwrap().clone();
-    if !matches!(token.token_type, TokenType::RESERVED) || token.len != op.len() || token.str != op
-    {
+    if !matches!(token.token_type, token_type) || token.len != op.len() || token.str != op {
         return false;
     }
     iter.next();

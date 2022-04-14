@@ -52,4 +52,6 @@ assert 6 'a=b=3; a+b;'
 assert 3 'foo=1; bar=2; foo+bar;'
 assert 2 'hoge=fuga=1; hoge+fuga;'
 
+
+assert 4 'a = 3;b = (3 + 17) / 4;return (a + b) / 2;'
 echo OK
