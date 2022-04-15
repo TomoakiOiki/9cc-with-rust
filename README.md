@@ -5,8 +5,6 @@ The purpose of this project is to learn low layer knowledge and basic Rust imple
 
 **Completed 11/28(From Chapter 12 onwards, it is in the middle of writing)(12章から先は執筆途中らしい)**
 
-**Will resume once written(執筆されたら再開予定)**
-
 # How to run?
 ## Run playground container
 ```
